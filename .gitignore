@@ -1,0 +1,19 @@
+# 本地数据、预训练向量与实验产物
+/data/
+/result/
+*.pt
+*.pth
+*.ckpt
+# Python 与编辑器缓存
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+# 本地凭据与环境设置
+.env
+.env.*
+*.pem
+*.key

@@ -1,0 +1,45 @@
+# 相对路径以本配置文件所在目录为基准，也可以填写绝对路径。
+[paths]
+# 训练集：用于建立词表和更新模型参数。
+train = "data/fce-error-detection/tsv/fce-public.train.original.tsv"
+ # 验证集：用于按 F0.5 选择最优模型，不更新参数。
+dev = "data/fce-error-detection/tsv/fce-public.dev.original.tsv"
+# 测试集：训练结束后评估最优模型。
+test = "data/fce-error-detection/tsv/fce-public.test.original.tsv"
+# 结果根目录：每次运行自动创建 YYYY-MM-DD/HH-MM-SS 子目录（北京时间）。
+output_dir = "result/train"
+# GloVe 预训练词向量文件，当前文件为 100 维；相对路径以配置文件目录为准。
+pretrained_vectors = "data/glove-wiki-gigaword-100"
+
+[training]
+# 随机种子：控制初始化与训练数据打乱。
+seed = 42
+# 训练轮数：完整遍历训练集的次数，正整数。
+epochs = 10
+# 每批句子数：越大通常占用内存越多，正整数。
+batch_size = 32
+# Adam 学习率：每次参数更新的步幅，有限正数。
+learning_rate = 0.001
+# 类别权重：[正确词(0), 错误词(1)]，均须为有限正数。
+# [1.0, 2.0] 增强错误词的损失权重；[1.0, 1.0] 等同普通交叉熵。
+class_weights = [1.0, 2.0]
+
+[model]
+# 每个 token 的词向量维度，必须与预训练文件一致；当前 GloVe 为 100 维。
+embedding_dim = 100
+# true 冻结整个词向量层（包括新增词向量）；false 允许训练时微调。
+freeze_embedding = true
+# 卷积输出通道数，即每个位置提取的特征数，正整数。
+conv_channels = 128
+# 必须为正奇数，程序自动补零以保持句子长度。
+kernel_size = 3
+# Embedding 后的随机丢弃概率，范围 [0, 1)，0 表示关闭。仅训练时生效。
+embedding_dropout = 0.2
+# 卷积 ReLU 后的随机丢弃概率，范围 [0, 1)。验证和检测时自动关闭。
+conv_dropout = 0.3
+
+[progress]
+# 是否显示训练、验证和测试进度条；false 仅保留汇总。
+enabled = true
+# 刷新间隔（秒），避免训练时刷屏过于频繁。
+mininterval = 0.5
