@@ -15,11 +15,11 @@ pretrained_vectors = "data/glove-wiki-gigaword-100"
 # 随机种子：控制初始化与训练数据打乱。
 seed = 42
 # 训练轮数：完整遍历训练集的次数，正整数。
-epochs = 10
+epochs = 15
 # 每批句子数：越大通常占用内存越多，正整数。
 batch_size = 32
 # Adam 学习率：每次参数更新的步幅，有限正数。
-learning_rate = 0.001
+learning_rate = 0.00001
 # 类别权重：[正确词(0), 错误词(1)]，均须为有限正数。
 # [1.0, 2.0] 增强错误词的损失权重；[1.0, 1.0] 等同普通交叉熵。
 class_weights = [1.0, 2.0]
@@ -32,7 +32,10 @@ freeze_embedding = true
 # 卷积输出通道数，即每个位置提取的特征数，正整数。
 conv_channels = 128
 # 必须为正奇数，程序自动补零以保持句子长度。
-kernel_size = 3
+kernel_size = 7
+# 每层的空洞率，数组长度就是卷积层数；[1] 可做单层对照实验。
+# [1, 2, 4] 配合 kernel_size=7 的感受野为 43；kernel_size=3 时为 15。
+dilations = [1, 2, 4]
 # Embedding 后的随机丢弃概率，范围 [0, 1)，0 表示关闭。仅训练时生效。
 embedding_dropout = 0.2
 # 卷积 ReLU 后的随机丢弃概率，范围 [0, 1)。验证和检测时自动关闭。
@@ -43,3 +46,12 @@ conv_dropout = 0.3
 enabled = true
 # 刷新间隔（秒），避免训练时刷屏过于频繁。
 mininterval = 0.5
+
+[detection]
+# 网页检测后端：bert 使用下载的对比模型，cnn 使用本项目训练的模型。
+backend = "bert"
+# BERT 目录包含 model.pt、config.json、vocab.txt；相对本配置文件。
+bert_dir = "models/comparison"
+# 错误概率达到此值即标为疑似错误，范围 [0, 1]；0.30 表示 30%。
+# 用于命令行和网页推理，不改变训练及验证指标的计算。修改后需重启网页服务。
+threshold = 0.30

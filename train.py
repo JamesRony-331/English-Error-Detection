@@ -111,6 +111,12 @@ def load_config(config_path):
     config["model"]["freeze_embedding"] = freeze_embedding
     if config["model"]["kernel_size"] % 2 == 0:
         raise ValueError("model.kernel_size 必须是奇数")
+    # 旧配置缺省时维持单层 CNN。新配置显式指定三层。
+    dilations = config["model"].get("dilations", [1])
+    if (not isinstance(dilations, list) or not dilations
+            or any(type(d) is not int or d <= 0 for d in dilations)):
+        raise ValueError("model.dilations 必须为非空正整数数组")
+    config["model"]["dilations"] = dilations
     lr = config["training"]["learning_rate"]
     if not math.isfinite(lr) or lr <= 0:
         raise ValueError("training.learning_rate 必须是有限正数")
@@ -204,7 +210,8 @@ def main(config_path=None):
         kernel_size=config["model"]["kernel_size"],
         embedding_dropout=config["model"]["embedding_dropout"],
         conv_dropout=config["model"]["conv_dropout"],
-        freeze_embedding=config["model"]["freeze_embedding"]
+        freeze_embedding=config["model"]["freeze_embedding"],
+        dilations=config["model"]["dilations"]
     )
     class_weights = torch.tensor(
         training["class_weights"], dtype=torch.float32,

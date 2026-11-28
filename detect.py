@@ -39,20 +39,39 @@ def tokenize(text):
 
 
 class Detector:
-    def __init__(self, weights):
+    def __init__(self, weights, config_path=None):
+        config_path = Path(config_path or PROJECT_DIR / "config.toml").expanduser()
+        with config_path.open("rb") as file:
+            config = tomllib.load(file)
+        self.threshold = config.get("detection", {}).get("threshold", 0.5)
+        if (isinstance(self.threshold, bool)
+                or not isinstance(self.threshold, (int, float))
+                or not 0 <= self.threshold <= 1):
+            raise ValueError("detection.threshold 必须为 0 到 1 之间的数值")
         checkpoint = torch.load(weights, map_location="cpu", weights_only=True)
         self.word_to_id = checkpoint["word_to_id"]
         self.epoch = checkpoint.get("epoch", "未知")
         # 从实际权重恢复架构，兼容没有保存 config 的早期检查点。
         state = checkpoint["model_state_dict"]
         model_config = checkpoint.get("config", {}).get("model", {})
+        if "conv.weight" in state:
+            # 兼容原来的单层 CNN 权重名称。
+            state = {key.replace("conv.", "convs.0.", 1)
+                     if key.startswith("conv.") else key: value
+                     for key, value in state.items()}
+            dilations = [1]
+        else:
+            dilations = model_config.get("dilations")
+            if dilations is None:
+                raise ValueError("多层 CNN 检查点缺少 model.dilations，无法确定空洞率")
         self.model = ErrorModel(
             state["embedding.weight"],
-            conv_channels=state["conv.weight"].shape[0],
-            kernel_size=state["conv.weight"].shape[2],
+            conv_channels=state["convs.0.weight"].shape[0],
+            kernel_size=state["convs.0.weight"].shape[2],
             embedding_dropout=model_config.get("embedding_dropout", 0.0),
             conv_dropout=model_config.get("conv_dropout", 0.0),
-            freeze_embedding=model_config.get("freeze_embedding", False))
+            freeze_embedding=model_config.get("freeze_embedding", False),
+            dilations=dilations)
         self.model.load_state_dict(state)
         self.model.eval()
 
@@ -64,7 +83,7 @@ class Detector:
         ids = [self.word_to_id.get(word, self.word_to_id["<UNK>"]) for word, _, _ in tokens]
         output = self.model(torch.tensor([ids], dtype=torch.long))
         probabilities = output.softmax(dim=-1)[0, :, 1].tolist()
-        predictions = output.argmax(dim=-1)[0].tolist()
+        predictions = [probability >= self.threshold for probability in probabilities]
         return [dict(token=word, start=start, end=end, error=bool(label),
                      probability=probability, unknown=word not in self.word_to_id)
                 for (word, start, end), label, probability in zip(tokens, predictions, probabilities)]
@@ -100,10 +119,11 @@ def main():
     args = parser.parse_args()
     try:
         weights = args.weights.expanduser().resolve() if args.weights else find_latest_weights(args.config)
-        detector = Detector(weights)
+        detector = Detector(weights, config_path=args.config)
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         parser.exit(1, f"模型加载失败：{error}\n")
     print(f"模型：{weights}\n模型轮次：{detector.epoch}")
+    print(f"错误判定阈值：{detector.threshold:.0%}")
     print("分词采用轻量规则，与训练集的 RASP 分词可能存在差异。")
     if args.text is not None:
         try:

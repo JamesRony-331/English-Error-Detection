@@ -1,9 +1,4 @@
-# 本地数据、预训练向量与实验产物
-/data/
-/result/
-*.pt
-*.pth
-*.ckpt
+# 数据与训练结果纳入版本控制，大型文件由 Git LFS 管理。
 # Python 与编辑器缓存
 __pycache__/
 *.py[cod]
@@ -17,3 +12,18 @@ venv/
 .env.*
 *.pem
 *.key
+
+# 演示文稿制作过程缓存
+docs/presentation_build/
+
+/result/
+/models/
+/model/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+docs/.chart-data-*/
+
+# 数据自行准备，不随代码上传
+/data/

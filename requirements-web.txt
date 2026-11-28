@@ -1,0 +1,4 @@
+-r requirements.txt
+-r requirements-ocr.txt
+Flask>=3.1,<4
+-r requirements-bert.txt
